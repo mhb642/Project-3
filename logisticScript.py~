@@ -1,0 +1,31 @@
+from __future__ import with_statement
+import mrjob
+from mrjob.job import MRJob
+from simple_logisticMR import mrsimpleLogistic
+import os
+import sys
+import numpy as np
+import ast
+import pickle
+THETA_FILE="/home/hafez/Documents/Project-3/theta.txt"
+args=['--theta=theta.txt', 'synData.txt']
+myLogistic=mrsimpleLogistic(args)
+with myLogistic.make_runner() as runner:
+    runner.run()
+    for line in runner.stream_output():
+       a=line.split('\n')
+       b=a[0] 
+       c=b.split(';')
+       j=float(c[0])
+       theta=np.array(ast.literal_eval(c[1].strip()))
+       print 'j=',j
+       print '\ntheta=',theta
+       np.savetxt(THETA_FILE,theta,delimiter=',')
+       
+       
+       
+
+
+
+
+       

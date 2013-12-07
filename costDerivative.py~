@@ -1,0 +1,60 @@
+from __future__ import division
+
+import numpy as np
+from math import exp,log
+import pickle
+from mrjob.job import MRJob
+from itertools import combinations
+
+class MRCostAndDerivative(MRJob):
+     
+     def configure_options(self):
+         super(MRCostAndDerivative, self).configure_options()
+         self.add_passthrough_option(
+            '--label', type='int', help='Current Label in the loop')
+         self.add_file_option('--theta')
+         
+     def get_theta(self):
+         f=open(self.options.theta)
+         theta=pickle.load(f)
+         f.close()
+         return theta
+     
+    
+     def CostDerivative(self,_,line):
+         l=line.split()
+         y=int(l[0])
+         label=self.options.label
+         if y!=label:
+            y=0
+         else:
+             y=1 
+         x=np.array([int(i) for i in l[1:-1]])
+         x=np.array(1,x)
+         theta=self.get_theta()
+         thetaArray=np.array([float(i) for i in theta])
+         thetaX=np.dot(thetaArray,x)
+         interValue1=(log(1/(1+exp(-thetaX)))-y)**2
+         interValue2=(log(1/(1+exp(-thetaX)))-y)*x
+         yield None, (interValue1,interValue2.tolist())
+        
+         
+     def SumCostDerivative(self,_,values): 
+         J=0
+         dJ=np.zeros(len(values[0][1]))   
+         for i in values:
+             J=J+i[0]
+             dJ=dJ+i[1]
+         theta=self.get_theta()
+         thetaArray=np.array([float(i) for i in theta])
+         thetaArray=thetaArray-0.1*dJ
+         yield None, (J,dJ.tolist(),thetaArray.tolist())
+         
+          
+     def steps(self):
+        return [self.mr(mapper=self.CostDerivative,
+                        reducer=self.SumCostDerivative)]
+
+if __name__ == '__main__':
+    MRCostAndDerivative.run()
+    
